@@ -1129,6 +1129,12 @@ async getOrCreateDocumentType(name) {
           console.log(`[DEBUG] Found existing document type "${name}" with ID ${existingDocType.id}`);
           return existingDocType;
       }
+
+      // Respect RESTRICT_TO_EXISTING_DOCUMENT_TYPES: never create new types when enabled
+      if (process.env.RESTRICT_TO_EXISTING_DOCUMENT_TYPES === 'yes') {
+          console.log(`[DEBUG] Document type "${name}" not found and RESTRICT_TO_EXISTING_DOCUMENT_TYPES=yes - not creating it`);
+          return null;
+      }
   
       // Erstelle neuen document_type
       try {
