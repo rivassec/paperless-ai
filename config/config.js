@@ -19,6 +19,21 @@ const parseOptionalBoolean = (value) => {
   return undefined;
 };
 
+// Helper function to parse positive-integer env vars, falling back to a default
+// when the value is missing, not a number, or not strictly positive.
+const parseEnvPositiveInt = (value, defaultValue) => {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+};
+
+// Tag cache tuning. Both defaults keep the previous behaviour for the common
+// case; installations with a large number of tags can raise them so that
+// /api/tags/ is polled far less often. See TAG_CACHE_LIFETIME / TAG_PAGE_SIZE.
+const tagCacheConfig = {
+  lifetime: parseEnvPositiveInt(process.env.TAG_CACHE_LIFETIME, 3000),
+  pageSize: parseEnvPositiveInt(process.env.TAG_PAGE_SIZE, 100)
+};
+
 // Initialize limit functions with defaults
 const limitFunctions = {
   activateTagging: parseEnvBoolean(process.env.ACTIVATE_TAGGING, 'yes'),
@@ -57,7 +72,8 @@ console.log('Loaded environment variables:', {
   PAPERLESS_API_TOKEN: '******',
   LIMIT_FUNCTIONS: limitFunctions,
   AI_RESTRICTIONS: aiRestrictions,
-  EXTERNAL_API: externalApiConfig.enabled === 'yes' ? 'enabled' : 'disabled'
+  EXTERNAL_API: externalApiConfig.enabled === 'yes' ? 'enabled' : 'disabled',
+  TAG_CACHE: tagCacheConfig
 });
 
 module.exports = {
@@ -79,6 +95,9 @@ module.exports = {
     apiUrl: process.env.PAPERLESS_API_URL,
     apiToken: process.env.PAPERLESS_API_TOKEN
   },
+  // Tag cache tuning (see parseEnvPositiveInt above)
+  tagCacheLifetime: tagCacheConfig.lifetime,
+  tagPageSize: tagCacheConfig.pageSize,
   openai: {
     apiKey: process.env.OPENAI_API_KEY
   },

@@ -11,7 +11,9 @@ class PaperlessService {
     this.tagCache = new Map();
     this.customFieldCache = new Map();
     this.lastTagRefresh = 0;
-    this.CACHE_LIFETIME = 3000; // 3 Sekunden
+    // Configurable through TAG_CACHE_LIFETIME (ms) and TAG_PAGE_SIZE, see config/config.js
+    this.CACHE_LIFETIME = config.tagCacheLifetime;
+    this.TAG_PAGE_SIZE = config.tagPageSize;
   }
 
   initialize() {
@@ -63,7 +65,7 @@ class PaperlessService {
       try {
         console.log('[DEBUG] Refreshing tag cache...');
         this.tagCache.clear();
-        let nextUrl = '/tags/';
+        let nextUrl = `/tags/?page_size=${this.TAG_PAGE_SIZE}`;
         while (nextUrl) {
           const response = await this.client.get(nextUrl);
 

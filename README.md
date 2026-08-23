@@ -81,6 +81,26 @@ Powered by **Retrieval-Augmented Generation (RAG)**, you can now search semantic
 
 ---
 
+## ⚡ Tag Cache Tuning
+
+Paperless-AI keeps a local cache of the tags in Paperless-ngx. On installations
+with a large tag vocabulary, `/api/tags/` gets slow, and the defaults can make it
+the dominant cost of processing a document. Two optional environment variables
+control this:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `TAG_CACHE_LIFETIME` | `3000` | How long the tag cache stays valid, in milliseconds. The default of 3 seconds means the cache typically expires while a single document is still being analyzed, so it is rebuilt for nearly every document. |
+| `TAG_PAGE_SIZE` | `100` | How many tags are requested per `/api/tags/` page when the cache is refreshed. Raising it means fewer sequential requests per refresh. |
+
+Invalid or non-positive values fall back to the defaults.
+
+For example, with several thousand tags, `TAG_CACHE_LIFETIME=3600000` (1 hour)
+and `TAG_PAGE_SIZE=1000` reduce tag fetching from tens of requests per document
+to a handful per hour.
+
+---
+
 ## 🔧 Local Development
 
 ```bash
@@ -89,6 +109,9 @@ npm install
 
 # Start development/test mode
 npm run test
+
+# Run the unit tests
+npm run test:unit
 ```
 
 ---
