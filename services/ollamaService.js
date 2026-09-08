@@ -23,6 +23,7 @@ class OllamaService {
     constructor() {
         this.apiUrl = config.ollama.apiUrl;
         this.model = config.ollama.model;
+        this.think = config.ollama.think;
         this.client = axios.create({
             timeout: 1800000 // 30 minutes timeout
         });
@@ -545,6 +546,7 @@ class OllamaService {
             prompt: prompt,
             system: systemPrompt,
             stream: false,
+            ...(this.think !== undefined && { think: this.think }),
             format: schema,
             options: {
                 temperature: 0.7,
@@ -696,6 +698,7 @@ class OllamaService {
                 prompt: prompt,
                 system: systemPrompt,
                 stream: false,
+                ...(this.think !== undefined && { think: this.think }),
                 options: {
                     temperature: 0.7,
                     top_p: 0.9,

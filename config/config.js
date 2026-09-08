@@ -10,6 +10,15 @@ const parseEnvBoolean = (value, defaultValue = 'yes') => {
   return value.toLowerCase() === 'true' || value === '1' || value.toLowerCase() === 'yes' ? 'yes' : 'no';
 };
 
+// Helper to parse tri-state boolean env vars: returns true/false, or undefined when unset
+const parseOptionalBoolean = (value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const v = String(value).toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(v)) return true;
+  if (['false', '0', 'no', 'off'].includes(v)) return false;
+  return undefined;
+};
+
 // Initialize limit functions with defaults
 const limitFunctions = {
   activateTagging: parseEnvBoolean(process.env.ACTIVATE_TAGGING, 'yes'),
@@ -75,7 +84,11 @@ module.exports = {
   },
   ollama: {
     apiUrl: process.env.OLLAMA_API_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'llama3.2'
+    model: process.env.OLLAMA_MODEL || 'llama3.2',
+    // Ollama native thinking toggle. Unset = use the model default; false disables
+    // reasoning output, required for reasoning models (Qwen3, Deepseek-r1, ...) which
+    // otherwise spend the num_predict budget on <think> and return no answer.
+    think: parseOptionalBoolean(process.env.OLLAMA_THINK)
   },
   custom: {
     apiUrl: process.env.CUSTOM_BASE_URL || '',
