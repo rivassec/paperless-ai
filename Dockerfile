@@ -1,5 +1,5 @@
 # Use a slim Node.js (LTS) image as base
-FROM node:22-slim
+FROM node:26-slim
 
 WORKDIR /app
 
