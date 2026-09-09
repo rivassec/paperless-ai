@@ -1,26 +1,25 @@
-FROM python:3.14-slim
-
+# ---------- builder ----------
+# See Dockerfile for the :latest-vs-digest rationale.
+FROM cgr.dev/chainguard/wolfi-base:latest AS builder
 WORKDIR /app
+RUN apk add --no-cache python-3.13 python-3.13-dev py3.13-pip build-base
+COPY requirements.txt ./
+RUN python3 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+RUN pip install --no-cache-dir --upgrade pip setuptools && \
+    pip install --no-cache-dir -r requirements.txt
+COPY main.py ./
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements file
-COPY requirements.txt /app/
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy Python code
-COPY main.py /app/
-
-# Create necessary directories
-RUN mkdir -p /app/data /app/data/chromadb
-
-# Expose port for FastAPI
+# ---------- runtime ----------
+FROM cgr.dev/chainguard/wolfi-base:latest AS runtime
+WORKDIR /app
+RUN apk add --no-cache python-3.13 libstdc++ libgcc libgomp shadow && \
+    useradd -u 1000 -m -d /home/appuser appuser
+COPY --from=builder --chown=1000:1000 /app /app
+RUN mkdir -p /app/data /app/data/chromadb && chown -R appuser:appuser /app
+ENV PATH="/app/venv/bin:$PATH" HOME=/home/appuser
+USER appuser
 EXPOSE 8000
-
-# Run the application with auto-initialization
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://localhost:8000/health\",timeout=5).status==200 else 1)"
 CMD ["python", "main.py", "--host", "0.0.0.0", "--port", "8000", "--initialize"]

@@ -1,55 +1,53 @@
-# Use a slim Node.js (LTS) image as base
-FROM node:22-slim
-
+# ---------- builder ----------
+# Chainguard/Wolfi glibc base. We use :latest deliberately: Chainguard rolling-
+# patches these images and the free tier garbage-collects pinned digests (a
+# digest pin would break future pulls). Language runtimes are pinned (nodejs-24,
+# python-3.13) for stability; rebuild picks up upstream CVE patches automatically.
+FROM cgr.dev/chainguard/wolfi-base:latest AS builder
 WORKDIR /app
 
-# Install system dependencies and clean up in single layer
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    python3 \
-    python3-pip \
-    python3-dev \
-    python3-venv \
-    make \
-    g++ \
-    curl \
-    wget && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Build toolchain (this stage is discarded; none of it ships in runtime)
+RUN apk add --no-cache nodejs-24 npm python-3.13 python-3.13-dev py3.13-pip build-base bash
 
-# Install PM2 process manager globally
-RUN npm install pm2 -g
-
-# Install Python dependencies for RAG service in a virtual environment
-COPY requirements.txt /app/
+# Python deps in a venv; upgrade pip+setuptools first (patches setuptools CVEs)
+COPY requirements.txt ./
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy package files for dependency installation
+# Node deps (compiles better-sqlite3 native module)
 COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Install node dependencies with clean install
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy application source code
+# App source
 COPY . .
-
-# Make startup script executable
 RUN chmod +x start-services.sh
 
-# Configure persistent data volume
-VOLUME ["/app/data"]
+# ---------- runtime ----------
+FROM cgr.dev/chainguard/wolfi-base:latest AS runtime
+WORKDIR /app
 
-# Configure application port - aber der tatsächliche Port wird durch PAPERLESS_AI_PORT bestimmt
+# Runtime only: node + python + torch shared libs + tini + bash. NO npm / build
+# tools -> keeps npm-core CVEs (tar/brace-expansion/ip-address/undici) out.
+RUN apk add --no-cache nodejs-24 python-3.13 libstdc++ libgcc libgomp bash tini shadow && \
+    useradd -u 1000 -m -d /home/appuser appuser
+
+COPY --from=builder --chown=1000:1000 /app /app
+RUN mkdir -p /app/data && chown -R appuser:appuser /app
+
+ENV PATH="/app/venv/bin:$PATH" \
+    HOME=/home/appuser \
+    NODE_ENV=production \
+    RAG_SERVICE_URL="http://localhost:8000" \
+    RAG_SERVICE_ENABLED="true"
+
+USER appuser
 EXPOSE ${PAPERLESS_AI_PORT:-3000}
 
-# Add health check with dynamic port
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PAPERLESS_AI_PORT:-3000}/health || exit 1
+HEALTHCHECK --interval=30s --timeout=30s --start-period=10s --retries=3 \
+    CMD node -e "require(\"http\").get(\"http://localhost:\"+(process.env.PAPERLESS_AI_PORT||3000)+\"/health\",r=>process.exit(r.statusCode===200?0:1)).on(\"error\",()=>process.exit(1))"
 
-# Set production environment
-ENV NODE_ENV=production
-
-# Start both Node.js and Python services using our script
+# tini as PID 1 (signal forwarding + zombie reaping); crash recovery via docker restart policy
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["./start-services.sh"]
