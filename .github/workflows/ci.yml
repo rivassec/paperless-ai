@@ -9,6 +9,68 @@ permissions:
   contents: read
 
 jobs:
+  # ---------- Tier 0: only build the heavy images when relevant files change ----------
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docker:
+              - 'Dockerfile'
+              - 'Dockerfile.rag'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'requirements.txt'
+              - 'docker-compose.yml'
+
+  # ---------- Tier 1: fast, cheap gates (run in parallel) ----------
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  hadolint:
+    name: Dockerfile lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: hadolint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+      - name: hadolint Dockerfile.rag
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile.rag
+          failure-threshold: error
+
+  checkov:
+    name: IaC misconfig scan (new MEDIUM+)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Checkov
+        run: |
+          pip install --quiet checkov
+          checkov --file Dockerfile --file Dockerfile.rag --file docker-compose.yml \
+            --baseline .checkov.baseline --hard-fail-on MEDIUM --quiet --compact
+
   build-test:
     name: Node build & test
     runs-on: ubuntu-latest
@@ -24,27 +86,47 @@ jobs:
       - name: npm audit (high+)
         run: npm audit --audit-level=high
 
-  gitleaks:
-    name: Secret scan
+  # ---------- Tier 2: build the RUNNING app image, only if all cheap gates pass ----------
+  docker-app:
+    name: Docker build (app) + image scan
+    needs: [changes, secret-scan, hadolint, checkov, build-test]
+    if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-
-  checkov:
-    name: IaC misconfig scan (new MEDIUM+)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      # Baseline suppresses legacy findings; fail on new MEDIUM and up.
-      # CodeQL code-scanning is enabled via GitHub default-setup, so no CodeQL job here.
-      - name: Checkov
+      - name: Free disk space
         run: |
-          pip install --quiet checkov
-          checkov --file Dockerfile --file Dockerfile.rag --file docker-compose.yml \
-            --baseline .checkov.baseline --hard-fail-on MEDIUM --quiet --compact
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune -af || true
+          df -h /
+      - name: Build app image
+        run: docker build -f Dockerfile -t paperless-ai:ci .
+      - name: Trivy image scan (HIGH/CRITICAL, fixable)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: paperless-ai:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  # ---------- Tier 3: heaviest (RAG torch/CUDA image), only if the app image built ----------
+  docker-rag:
+    name: Docker build (RAG) + image scan
+    needs: [docker-app]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune -af || true
+          df -h /
+      - name: Build RAG image
+        run: docker build -f Dockerfile.rag -t paperless-ai-rag:ci .
+      - name: Trivy image scan (HIGH/CRITICAL, fixable)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: paperless-ai-rag:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
