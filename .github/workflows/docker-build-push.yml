@@ -3,6 +3,11 @@ on:
     types: [published]  # Only triggers when a release is published
   schedule:
     - cron: "0 0 * * *" # Nightly build
+
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   docker:
     runs-on: ubuntu-latest
