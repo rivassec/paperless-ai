@@ -101,9 +101,12 @@ jobs:
           df -h /
       - name: Build app image
         run: docker build -f Dockerfile -t paperless-ai:ci .
-      - name: Trivy image scan (report-only, HIGH/CRITICAL, fixable)
+      - name: Trivy image scan (report-only, best-effort)
+        continue-on-error: true
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.65.0
+          TRIVY_VER=0.74.0
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VER}/trivy_${TRIVY_VER}_Linux-64bit.tar.gz" -o /tmp/trivy.tgz
+          sudo tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy
           trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --no-progress --exit-code 0 paperless-ai:ci
 
   # ---------- Tier 3: heaviest (RAG torch/CUDA image), only if the app image built ----------
@@ -120,7 +123,10 @@ jobs:
           df -h /
       - name: Build RAG image
         run: docker build -f Dockerfile.rag -t paperless-ai-rag:ci .
-      - name: Trivy image scan (report-only, HIGH/CRITICAL, fixable)
+      - name: Trivy image scan (report-only, best-effort)
+        continue-on-error: true
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.65.0
+          TRIVY_VER=0.74.0
+          curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VER}/trivy_${TRIVY_VER}_Linux-64bit.tar.gz" -o /tmp/trivy.tgz
+          sudo tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy
           trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --no-progress --exit-code 0 paperless-ai-rag:ci
