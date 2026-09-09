@@ -53,7 +53,7 @@ class ChatService {
         mimeType: document.mime_type
       };
     } catch (error) {
-      console.error(`Error downloading document ${documentId}:`, error);
+      console.error('Error downloading document %s:', documentId, error);
       throw error;
     }
   }
@@ -99,7 +99,7 @@ class ChatService {
         initialized: true
       };
     } catch (error) {
-      console.error(`Error initializing chat for document ${documentId}:`, error);
+      console.error('Error initializing chat for document %s:', documentId, error);
       throw error;
     }
   }

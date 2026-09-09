@@ -42,7 +42,7 @@ class PaperlessService {
       console.warn(`[DEBUG] No thumbnail data for document ${documentId}`);
       return null;
     } catch (error) {
-      console.error(`[ERROR] fetching thumbnail for document ${documentId}:`, error.message);
+      console.error('[ERROR] fetching thumbnail for document %s:', documentId, error.message);
       if (error.response) {
         console.log('[ERROR] status:', error.response.status);
         console.log('[ERROR] headers:', error.response.headers);
@@ -194,7 +194,7 @@ class PaperlessService {
         return foundField;
       }
     } catch (error) {
-      console.warn(`[ERROR] searching for custom field "${fieldName}":`, error.message);
+      console.warn('[ERROR] searching for custom field "%s":', fieldName, error.message);
     }
 
     return null;
@@ -279,7 +279,7 @@ class PaperlessService {
         return foundTag;
       }
     } catch (error) {
-      console.warn(`[ERROR] searching for tag "${tagName}":`, error.message);
+      console.warn('[ERROR] searching for tag "%s":', tagName, error.message);
     }
 
     return null;
@@ -380,7 +380,7 @@ class PaperlessService {
           }
   
         } catch (error) {
-          console.error(`[ERROR] processing tag "${tagName}":`, error.message);
+          console.error('[ERROR] processing tag "%s":', tagName, error.message);
           errors.push({ tagName, error: error.message });
         }
       }
@@ -949,7 +949,7 @@ class PaperlessService {
       const response = await this.client.get(`/documents/${documentId}/`);
       return response.data;
     } catch (error) {
-      console.error(`[ERROR] fetching document ${documentId}:`, error.message);
+      console.error('[ERROR] fetching document %s:', documentId, error.message);
       throw error;
     }
   }
@@ -1079,7 +1079,7 @@ async searchForExistingCorrespondent(correspondent) {
             throw createError;
         }
     } catch (error) {
-        console.error(`[ERROR] Failed to process correspondent "${name}":`, error.message);
+        console.error('[ERROR] Failed to process correspondent "%s":', name, error.message);
         throw error;
     }
 }
@@ -1179,7 +1179,7 @@ async getOrCreateDocumentType(name) {
     if (!this.client) return;
   
     try {
-      console.log(`[DEBUG] Removing unused tags from document ${documentId}, keeping tags:`, keepTagIds);
+      console.log('[DEBUG] Removing unused tags from document %s, keeping tags:', documentId, keepTagIds);
       
       // Hole aktuelles Dokument
       const currentDoc = await this.getDocument(documentId);
@@ -1203,7 +1203,7 @@ async getOrCreateDocumentType(name) {
       
       return await this.getDocument(documentId);
     } catch (error) {
-      console.error(`[ERROR] Error removing unused tags from document ${documentId}:`, error.message);
+      console.error('[ERROR] Error removing unused tags from document %s:', documentId, error.message);
       throw error;
     }
   }
@@ -1276,7 +1276,7 @@ async getOrCreateDocumentType(name) {
       const currentDoc = await this.getDocument(documentId);
       
       if (updates.tags) {
-        console.log(`[DEBUG] Current tags for document ${documentId}:`, currentDoc.tags);
+        console.log('[DEBUG] Current tags for document %s:', documentId, currentDoc.tags);
         console.log(`[DEBUG] Adding new tags:`, updates.tags);
         console.log(`[DEBUG] Current correspondent:`, currentDoc.correspondent);
         console.log(`[DEBUG] New correspondent:`, updates.correspondent);
@@ -1349,11 +1349,11 @@ async getOrCreateDocumentType(name) {
       
       console.log('[DEBUG] Final update data:', updateData);
       await this.client.patch(`/documents/${documentId}/`, updateData);
-      console.log(`[SUCCESS] Updated document ${documentId} with:`, updateData);
+      console.log('[SUCCESS] Updated document %s with:', documentId, updateData);
       return await this.getDocument(documentId);
     } catch (error) {
       console.log(error);
-      console.error(`[ERROR] updating document ${documentId}:`, error.message);
+      console.error('[ERROR] updating document %s:', documentId, error.message);
       return null;
     }
   }

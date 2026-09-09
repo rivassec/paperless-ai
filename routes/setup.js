@@ -355,7 +355,7 @@ router.post('/login', async (req, res) => {
 
     // Compare passwords
     const isValidPassword = await bcrypt.compare(password, user.password);
-    console.log('Password validation result:', isValidPassword);
+    console.log('Password validation result:', isValidPassword ? 'valid' : 'invalid');
 
     if (isValidPassword) {
       const token = jwt.sign(
@@ -368,7 +368,7 @@ router.post('/login', async (req, res) => {
       );
       res.cookie('jwt', token, {
         httpOnly: true,
-        secure: false,  
+        secure: process.env.COOKIE_SECURE === 'true',  
         sameSite: 'lax', 
         path: '/',
         maxAge: 24 * 60 * 60 * 1000 
@@ -1830,7 +1830,7 @@ router.post('/api/key-regenerate', async (req, res) => {
 
     // Sende die Antwort zurück
     res.json({ success: apiKey });
-    console.log('API key regenerated:', apiKey);
+    console.log('API key regenerated: ***');
   } catch (error) {
     console.error('API key regeneration error:', error);
     res.status(500).json({ error: 'Error regenerating API key' });
@@ -3718,7 +3718,7 @@ router.post('/setup', express.json(), async (req, res) => {
               console.log(`[SUCCESS] Created/found custom field: ${field.value}`);
             }
           } catch (fieldError) {
-            console.error(`[WARNING] Error creating custom field ${field.value}:`, fieldError);
+            console.error('[WARNING] Error creating custom field:', field.value, fieldError);
           }
         }
       } catch (error) {

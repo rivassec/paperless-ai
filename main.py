@@ -316,7 +316,7 @@ class DataManager:
                 return True, "New documents detected"
         except Exception as e:
             logger.error(f"Error checking for updates: {str(e)}")
-            return False, f"Error: {str(e)}"
+            return False, "Error checking for updates"
     
     def fetch_documents_from_api(self):
         """Fetch all documents from Paperless-NGX API with pagination"""
@@ -1986,10 +1986,12 @@ async def check_health():
             health_status["overall_status"] = "critical"
             
     except Exception as e:
+        logger.error(f"Error during health check: {str(e)}")
+        logger.error(traceback.format_exc())
         health_status["server_status"] = "error"
-        health_status["error"] = str(e)
+        health_status["error"] = "Internal server error"
         health_status["overall_status"] = "critical"
-        health_status["issues"].append(f"Error during health check: {str(e)}")
+        health_status["issues"].append("Error during health check")
         health_status["recommendations"].append("Restart the server and call /initialize with force=true")
         
     return health_status
