@@ -4,6 +4,7 @@ FROM node:24-slim
 WORKDIR /app
 
 # System dependencies + security upgrades, cleaned up in a single layer
+# (tini = PID-1 init for signal handling / zombie reaping; replaces pm2)
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
@@ -13,14 +14,12 @@ RUN apt-get update && \
     python3-venv \
     make \
     g++ \
-    curl \
-    wget && \
+    tini && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Upgrade global npm and install PM2 (patches CVEs in npm-bundled deps: tar, pacote, sigstore, ...)
+# Upgrade global npm (patches CVEs in npm-bundled deps: tar, pacote, sigstore, ...)
 RUN npm install -g npm@latest && \
-    npm install -g pm2@latest && \
     npm cache clean --force
 
 # Install Python dependencies in a venv; upgrade pip+setuptools first (patches setuptools CVEs)
@@ -53,12 +52,13 @@ VOLUME ["/app/data"]
 # Configure application port (actual port set via PAPERLESS_AI_PORT)
 EXPOSE ${PAPERLESS_AI_PORT:-3000}
 
-# Health check with dynamic port
+# Health check (node-based; no curl dependency)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PAPERLESS_AI_PORT:-3000}/health || exit 1
+    CMD node -e "require('http').get('http://localhost:'+(process.env.PAPERLESS_AI_PORT||3000)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 ENV NODE_ENV=production
 USER node
 
-# Start both Node.js and Python services
+# tini as PID 1 (signal forwarding + zombie reaping); crash recovery via docker restart policy
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["./start-services.sh"]
