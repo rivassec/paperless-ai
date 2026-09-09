@@ -94,7 +94,8 @@
               1,
               4,
               7
-            ]
+            ],
+            "maxItems": 1000
           },
           "correspondent": {
             "type": "integer",
@@ -127,7 +128,8 @@
             "items": {
               "$ref": "#/components/schemas/CustomField"
             },
-            "description": "Custom field values for the document"
+            "description": "Custom field values for the document",
+            "maxItems": 1000
           }
         }
       },
@@ -154,7 +156,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Tag"
-            }
+            },
+            "maxItems": 1000
           },
           "correspondent": {
             "type": "string",
@@ -252,7 +255,8 @@
               1,
               4,
               7
-            ]
+            ],
+            "maxItems": 1000
           },
           "correspondent": {
             "type": "integer",
@@ -274,7 +278,8 @@
             "items": {
               "$ref": "#/components/schemas/CustomField"
             },
-            "description": "Custom field values for the document"
+            "description": "Custom field values for the document",
+            "maxItems": 1000
           }
         }
       },
@@ -318,7 +323,8 @@
                   "invoice",
                   "utilities",
                   "2023"
-                ]
+                ],
+                "maxItems": 1000
               },
               "correspondent": {
                 "type": "string",
@@ -410,7 +416,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HistoryItem"
-            }
+            },
+            "maxItems": 1000
           }
         }
       },
@@ -881,7 +888,8 @@
                           "example": [
                             "Invoice",
                             "Finance"
-                          ]
+                          ],
+                          "maxItems": 1000
                         },
                         "correspondent": {
                           "type": "string",
@@ -1169,7 +1177,8 @@
                             "example": "What is this document about?"
                           }
                         }
-                      }
+                      },
+                      "maxItems": 1000
                     }
                   }
                 }
@@ -1396,7 +1405,8 @@
                             "example": "What is this document about?"
                           }
                         }
-                      }
+                      },
+                      "maxItems": 1000
                     }
                   }
                 }
@@ -1666,7 +1676,8 @@
                                   "example": "#FF5733"
                                 }
                               }
-                            }
+                            },
+                            "maxItems": 1000
                           },
                           "correspondent": {
                             "type": "string",
@@ -1679,7 +1690,8 @@
                             "example": "http://paperless.example.com/documents/123/"
                           }
                         }
-                      }
+                      },
+                      "maxItems": 1000
                     }
                   }
                 }
@@ -1825,7 +1837,8 @@
                       123,
                       456,
                       789
-                    ]
+                    ],
+                    "maxItems": 1000
                   }
                 }
               }
@@ -2374,7 +2387,8 @@
                         "Invoice",
                         "ACME Corp",
                         "2023"
-                      ]
+                      ],
+                      "maxItems": 1000
                     }
                   }
                 }
@@ -2493,7 +2507,8 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Tag"
-                  }
+                  },
+                  "maxItems": 1000
                 }
               }
             }
@@ -2547,7 +2562,8 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Document"
-                  }
+                  },
+                  "maxItems": 1000
                 }
               }
             }
@@ -2615,7 +2631,8 @@
                         "example": 5
                       }
                     }
-                  }
+                  },
+                  "maxItems": 1000
                 }
               }
             }
@@ -2692,7 +2709,8 @@
                         "example": 12
                       }
                     }
-                  }
+                  },
+                  "maxItems": 1000
                 }
               }
             }
@@ -3449,7 +3467,8 @@
                       "Invoice",
                       "Finance",
                       "Acme Corp"
-                    ]
+                    ],
+                    "maxItems": 1000
                   },
                   "id": {
                     "type": "string",
@@ -3488,7 +3507,8 @@
                       "example": [
                         "Invoice",
                         "Finance"
-                      ]
+                      ],
+                      "maxItems": 1000
                     },
                     "documentType": {
                       "type": "string",
@@ -3688,7 +3708,8 @@
                       "Invoice",
                       42,
                       "Finance"
-                    ]
+                    ],
+                    "maxItems": 1000
                   },
                   "correspondent": {
                     "type": "string",
@@ -3740,7 +3761,8 @@
                       },
                       "example": [
                         "Failed to create tag: Invalid tag name"
-                      ]
+                      ],
+                      "maxItems": 1000
                     }
                   }
                 }

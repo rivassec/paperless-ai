@@ -1,10 +1,11 @@
 # Use a slim Node.js (LTS) image as base
-FROM node:22-slim
+FROM node:24-slim
 
 WORKDIR /app
 
-# Install system dependencies and clean up in single layer
+# System dependencies + security upgrades, cleaned up in a single layer
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
@@ -17,39 +18,42 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install PM2 process manager globally
-RUN npm install pm2 -g
+# Upgrade global npm and install PM2 (patches CVEs in npm-bundled deps: tar, pacote, sigstore, ...)
+RUN npm install -g npm@latest && \
+    npm install -g pm2@latest && \
+    npm cache clean --force
 
-# Install Python dependencies for RAG service in a virtual environment
+# Install Python dependencies in a venv; upgrade pip+setuptools first (patches setuptools CVEs)
 COPY requirements.txt /app/
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy package files for dependency installation
+# Copy package files and install node dependencies (production only)
 COPY package*.json ./
-
-# Install node dependencies with clean install
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy application source code
 COPY . .
-
-# Make startup script executable
 RUN chmod +x start-services.sh
+
+# Run as the image built-in non-root node user (uid 1000); give it ownership of /app
+RUN mkdir -p /app/data && chown -R node:node /app
+ENV HOME=/home/node
 
 # Configure persistent data volume
 VOLUME ["/app/data"]
 
-# Configure application port - aber der tatsächliche Port wird durch PAPERLESS_AI_PORT bestimmt
+# Configure application port (actual port set via PAPERLESS_AI_PORT)
 EXPOSE ${PAPERLESS_AI_PORT:-3000}
 
-# Add health check with dynamic port
+# Health check with dynamic port
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PAPERLESS_AI_PORT:-3000}/health || exit 1
 
-# Set production environment
 ENV NODE_ENV=production
+USER node
 
-# Start both Node.js and Python services using our script
+# Start both Node.js and Python services
 CMD ["./start-services.sh"]
