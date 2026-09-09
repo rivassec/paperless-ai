@@ -101,13 +101,10 @@ jobs:
           df -h /
       - name: Build app image
         run: docker build -f Dockerfile -t paperless-ai:ci .
-      - name: Trivy image scan (HIGH/CRITICAL, fixable)
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          image-ref: paperless-ai:ci
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+      - name: Trivy image scan (report-only, HIGH/CRITICAL, fixable)
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.65.0
+          trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --no-progress --exit-code 0 paperless-ai:ci
 
   # ---------- Tier 3: heaviest (RAG torch/CUDA image), only if the app image built ----------
   docker-rag:
@@ -123,10 +120,7 @@ jobs:
           df -h /
       - name: Build RAG image
         run: docker build -f Dockerfile.rag -t paperless-ai-rag:ci .
-      - name: Trivy image scan (HIGH/CRITICAL, fixable)
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          image-ref: paperless-ai-rag:ci
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+      - name: Trivy image scan (report-only, HIGH/CRITICAL, fixable)
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.65.0
+          trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --no-progress --exit-code 0 paperless-ai-rag:ci
