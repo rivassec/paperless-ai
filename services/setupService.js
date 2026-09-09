@@ -93,7 +93,7 @@ class SetupService {
       apiKey: apiKey,
       model: model
     };
-    console.log('Custom AI config:', config);
+    console.log('Custom AI config:', { baseURL: url, model: model });
     try {
       const openai = new OpenAI({ 
         apiKey: config.apiKey, 
