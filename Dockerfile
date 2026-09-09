@@ -3,7 +3,7 @@
 # patches these images and the free tier garbage-collects pinned digests (a
 # digest pin would break future pulls). Language runtimes are pinned (nodejs-24,
 # python-3.13) for stability; rebuild picks up upstream CVE patches automatically.
-FROM cgr.dev/chainguard/wolfi-base:latest AS builder
+FROM cgr.dev/chainguard/wolfi-base:latest@sha256:918a593b8268c222afd4e2c4f06860ac984e60719b4697e4c71d796bc8fcd042 AS builder
 WORKDIR /app
 
 # Build toolchain (this stage is discarded; none of it ships in runtime)
@@ -25,7 +25,7 @@ COPY . .
 RUN chmod +x start-services.sh
 
 # ---------- runtime ----------
-FROM cgr.dev/chainguard/wolfi-base:latest AS runtime
+FROM cgr.dev/chainguard/wolfi-base:latest@sha256:918a593b8268c222afd4e2c4f06860ac984e60719b4697e4c71d796bc8fcd042 AS runtime
 WORKDIR /app
 
 # Runtime only: node + python + torch shared libs + tini + bash. NO npm / build
