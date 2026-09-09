@@ -29,11 +29,12 @@ class ChatService {
   async downloadDocument(documentId) {
     try {
       const document = await PaperlessService.getDocument(documentId);
-      if (!/^\d+$/.test(String(documentId))) {
+      const idNum = Number(documentId);
+      if (!Number.isInteger(idNum) || idNum <= 0) {
         throw new Error(`Invalid document ID: ${documentId}`);
       }
       const safeFilename = path.basename(String(document.original_filename || ''));
-      const tempFilePath = path.join(this.tempDir, `${documentId}_${safeFilename}`);
+      const tempFilePath = path.join(this.tempDir, `${idNum}_${safeFilename}`);
       
       // Create download stream
       const response = await PaperlessService.client.get(`/documents/${documentId}/download/`, {
