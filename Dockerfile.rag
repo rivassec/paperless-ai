@@ -15,6 +15,10 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir --upgrade pip setuptools && \
     pip install --no-cache-dir -r requirements.txt
 
+# Remove the build toolchain now that deps are compiled
+RUN apt-get purge -y --auto-remove build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy Python code
 COPY main.py /app/
 

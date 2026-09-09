@@ -34,6 +34,11 @@ RUN pip install --no-cache-dir --upgrade pip setuptools && \
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# Remove the build toolchain now that native modules are compiled
+# (drops linux-libc-dev/binutils/g++/make/python3-dev -> ~1200 build-only CVEs)
+RUN apt-get purge -y --auto-remove make g++ python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy application source code
 COPY . .
 RUN chmod +x start-services.sh
