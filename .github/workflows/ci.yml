@@ -102,7 +102,7 @@ jobs:
       - name: Build app image
         run: docker build -f Dockerfile -t paperless-ai:ci .
       - name: Trivy image scan (HIGH/CRITICAL, fixable)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: paperless-ai:ci
           severity: HIGH,CRITICAL
@@ -124,7 +124,7 @@ jobs:
       - name: Build RAG image
         run: docker build -f Dockerfile.rag -t paperless-ai-rag:ci .
       - name: Trivy image scan (HIGH/CRITICAL, fixable)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           image-ref: paperless-ai-rag:ci
           severity: HIGH,CRITICAL
