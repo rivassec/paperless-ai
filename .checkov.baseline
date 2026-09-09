@@ -1,0 +1,27 @@
+{
+    "failed_checks": [
+        {
+            "file": "Dockerfile",
+            "findings": [
+                {
+                    "resource": "Dockerfile.",
+                    "check_ids": [
+                        "CKV_DOCKER_3"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "Dockerfile.rag",
+            "findings": [
+                {
+                    "resource": "Dockerfile.rag.",
+                    "check_ids": [
+                        "CKV_DOCKER_2",
+                        "CKV_DOCKER_3"
+                    ]
+                }
+            ]
+        }
+    ]
+}

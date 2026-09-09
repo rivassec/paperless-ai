@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Node build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Unit tests
+        run: npm run test:unit
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high
+
+  gitleaks:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+
+  checkov:
+    name: IaC misconfig scan (new MEDIUM+)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Baseline suppresses legacy findings; fail on new MEDIUM and up.
+      # CodeQL code-scanning is enabled via GitHub default-setup, so no CodeQL job here.
+      - name: Checkov
+        run: |
+          pip install --quiet checkov
+          checkov --file Dockerfile --file Dockerfile.rag --file docker-compose.yml \
+            --baseline .checkov.baseline --hard-fail-on MEDIUM --quiet --compact
