@@ -509,7 +509,7 @@ async function handleAnalysis() {
 async function handleChat() {
     const documentId = document.getElementById('hiddenId').value;
 
-    window.location.href= `/chat?open=${documentId}`
+    window.location.href= `/chat?open=${encodeURIComponent(documentId)}`
 }
 
 async function updateDocumentTags() {

@@ -843,8 +843,8 @@ function createFieldElement(fieldName, data_type, currency = null) {
             <i class="fas fa-grip-vertical"></i>
         </div>
         <div class="flex-1">
-            <p class="font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}">${fieldName}</p>
-            <p class="text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}">${typeDisplay}</p>
+            <p class="font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}"></p>
+            <p class="text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}"></p>
         </div>
         <button type="button" 
                 onclick="removeCustomField(this)"
@@ -852,6 +852,8 @@ function createFieldElement(fieldName, data_type, currency = null) {
             <i class="fas fa-trash"></i>
         </button>
     `;
+    div.querySelector('p.font-medium').textContent = fieldName;
+    div.querySelector('p.text-sm').textContent = typeDisplay;
     
     return div;
 }

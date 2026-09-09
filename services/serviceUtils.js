@@ -188,9 +188,21 @@ async function writePromptToFile(systemPrompt, truncatedContent, filePath = './l
     }
 }
 
+// Validate a Paperless document ID before using it to build a filesystem path.
+// Paperless document IDs are always positive integers; rejecting anything else
+// blocks path traversal (CodeQL js/path-injection).
+function safeDocumentId(id) {
+    const idStr = String(id);
+    if (!/^\d+$/.test(idStr)) {
+        throw new Error(`Invalid document ID: ${idStr}`);
+    }
+    return idStr;
+}
+
 module.exports = {
     calculateTokens,
     calculateTotalPromptTokens,
     truncateToTokenLimit,
-    writePromptToFile
+    writePromptToFile,
+    safeDocumentId
 };

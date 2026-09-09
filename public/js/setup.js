@@ -779,8 +779,8 @@ function createFieldElement(fieldName, data_type, currency = null) {
         </div>
         <div class="flex-1 flex items-center gap-4">
             <div class="flex-1">
-                <p class="font-medium">${fieldName}</p>
-                <p class="text-sm text-gray-500">${typeDisplay}</p>
+                <p class="font-medium"></p>
+                <p class="text-sm text-gray-500"></p>
             </div>
         </div>
         <button type="button" 
@@ -789,6 +789,8 @@ function createFieldElement(fieldName, data_type, currency = null) {
             <i class="fas fa-trash"></i>
         </button>
     `;
+    div.querySelector('p.font-medium').textContent = fieldName;
+    div.querySelector('p.text-sm').textContent = typeDisplay;
     return div;
 }
 

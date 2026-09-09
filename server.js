@@ -14,6 +14,7 @@ process.env.RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8
 process.env.RAG_SERVICE_ENABLED = process.env.RAG_SERVICE_ENABLED || 'true';
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 const Logger = require('./services/loggerService');
 const { max } = require('date-fns');
 const swaggerUi = require('swagger-ui-express');
@@ -66,6 +67,16 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cookieParser());
+
+// Rate limiting: LAN single-user app; generous limit bounds abuse without
+// breaking thumbnail-heavy pages. Registered before all routes below.
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 1000,              // requests per IP per window
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+app.use(limiter);
 
 // Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

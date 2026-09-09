@@ -2,7 +2,8 @@ const {
     calculateTokens,
     calculateTotalPromptTokens,
     truncateToTokenLimit,
-    writePromptToFile
+    writePromptToFile,
+    safeDocumentId
 } = require('./serviceUtils');
 const axios = require('axios');
 const config = require('../config/config');
@@ -516,7 +517,7 @@ class OllamaService {
     async _handleThumbnailCaching(id) {
         if (!id) return;
 
-        const cachePath = path.join('./public/images', `${id}.png`);
+        const cachePath = path.join('./public/images', `${safeDocumentId(id)}.png`);
         try {
             await fs.access(cachePath);
             console.log('[DEBUG] Thumbnail already cached');

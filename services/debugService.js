@@ -16,7 +16,7 @@ const getDocuments = async () => {
     }
     catch (error) {
         console.error('Paperless validation error:', error.message);
-        return JSON.stringify(error);
+        throw error;
     }
 }
 
@@ -32,7 +32,7 @@ const getTags = async () => {
     }
     catch (error) {
         console.error('Paperless validation error:', error.message);
-        return JSON.stringify(error);
+        throw error;
     }
 }
 
@@ -48,7 +48,7 @@ const getCorrespondents = async () => {
     }
     catch (error) {
         console.error('Paperless validation error:', error.message);
-        return JSON.stringify(error);
+        throw error;
     }
 }
 

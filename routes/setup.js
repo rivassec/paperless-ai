@@ -1,6 +1,16 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const setupService = require('../services/setupService.js');
+
+// Rate limiting for all setup routes (LAN single-user app; generous limit).
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 1000,              // requests per IP per window
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+router.use(limiter);
 const paperlessService = require('../services/paperlessService.js');
 const openaiService = require('../services/openaiService.js');
 const ollamaService = require('../services/ollamaService.js');
@@ -613,7 +623,11 @@ router.get('/playground', protectApiRoute, async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/thumb/:documentId', async (req, res) => {
-  const cachePath = path.join('./public/images', `${req.params.documentId}.png`);
+  const documentId = req.params.documentId;
+  if (!/^\d+$/.test(documentId)) {
+    return res.status(400).send('Invalid document ID');
+  }
+  const cachePath = path.join('./public/images', `${documentId}.png`);
 
   try {
     // Prüfe ob das Bild bereits im Cache existiert
@@ -2840,8 +2854,13 @@ router.get('/debug', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/debug/tags', async (req, res) => {
-  const tags = await debugService.getTags();
-  res.json(tags);
+  try {
+    const tags = await debugService.getTags();
+    res.json(tags);
+  } catch (error) {
+    console.error('Error in GET /debug/tags:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 /**
@@ -2884,8 +2903,13 @@ router.get('/debug/tags', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/debug/documents', async (req, res) => {
-  const documents = await debugService.getDocuments();
-  res.json(documents);
+  try {
+    const documents = await debugService.getDocuments();
+    res.json(documents);
+  } catch (error) {
+    console.error('Error in GET /debug/documents:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 /**
@@ -2928,8 +2952,13 @@ router.get('/debug/documents', async (req, res) => {
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/debug/correspondents', async (req, res) => {
-  const correspondents = await debugService.getCorrespondents();
-  res.json(correspondents);
+  try {
+    const correspondents = await debugService.getCorrespondents();
+    res.json(correspondents);
+  } catch (error) {
+    console.error('Error in GET /debug/correspondents:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 /**
