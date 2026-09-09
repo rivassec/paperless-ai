@@ -50,12 +50,12 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
-          failure-threshold: warning
+          failure-threshold: error
       - name: hadolint Dockerfile.rag
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile.rag
-          failure-threshold: warning
+          failure-threshold: error
 
   checkov:
     name: IaC misconfig scan (new MEDIUM+)
