@@ -1292,39 +1292,20 @@ async getOrCreateDocumentType(name) {
         delete updates.correspondent;
       }
 
-      let updateData;
-      try {
-        if (updates.created) {
-          let dateObject;
-          
-          dateObject = parseISO(updates.created);
-          
-          if (!isValid(dateObject)) {
-            dateObject = parse(updates.created, 'dd.MM.yyyy', new Date());
-            if (!isValid(dateObject)) {
-              dateObject = parse(updates.created, 'dd-MM-yyyy', new Date());
-            }
-          }
-          
-          if (!isValid(dateObject)) {
-            console.warn(`[WARN] Invalid date format: ${updates.created}, using fallback date: 01.01.1990`);
-            dateObject = new Date(1990, 0, 1);
-          }
-      
-          updateData = {
-            ...updates,
-            created: format(dateObject, 'yyyy-MM-dd'),
-          };
+      // An unparseable date must never overwrite the document's existing `created`:
+      // the old 1990-01-01 fallback silently corrupted every document whose model
+      // output was not a clean date (null-as-string, ranges, "August 2026").
+      const updateData = { ...updates };
+      if ('created' in updates) {
+        const created = normalizeCreatedDate(updates.created);
+        if (created) {
+          updateData.created = created;
         } else {
-          updateData = { ...updates };
+          delete updateData.created;
+          if (updates.created) {
+            console.warn(`[WARN] Unparseable document date "${updates.created}" for document ${documentId}; keeping the existing created date`);
+          }
         }
-      } catch (error) {
-        console.warn('[WARN] Error parsing date:', error.message);
-        console.warn('[DEBUG] Received Date:', updates);
-        updateData = {
-          ...updates,
-          created: format(new Date(1990, 0, 1), 'yyyy-MM-dd'),
-        };
       }
 
       // // Handle custom fields update
@@ -1360,4 +1341,20 @@ async getOrCreateDocumentType(name) {
 }
 
 
+/**
+ * Normalizes a model-supplied document date to `yyyy-MM-dd`.
+ * Accepts ISO dates and the dd.MM.yyyy / dd-MM-yyyy forms models produce.
+ * @param {unknown} value Raw `created` value from the AI analysis
+ * @returns {string|null} The normalized date, or null when it is missing or unparseable
+ */
+function normalizeCreatedDate(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const raw = value.trim();
+  for (const candidate of [parseISO(raw), parse(raw, 'dd.MM.yyyy', new Date()), parse(raw, 'dd-MM-yyyy', new Date())]) {
+    if (isValid(candidate)) return format(candidate, 'yyyy-MM-dd');
+  }
+  return null;
+}
+
 module.exports = new PaperlessService();
+module.exports.normalizeCreatedDate = normalizeCreatedDate;
