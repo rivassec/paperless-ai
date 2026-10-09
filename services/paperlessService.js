@@ -5,6 +5,15 @@ const fs = require('fs');
 const path = require('path');
 const { parse, isValid, parseISO, format } = require('date-fns');
 
+// Documents with this tag got a reviewed `created` at upload; the model never changes it.
+const PROTECTED_DATE_TAG = 'via:ingest';
+// Model dates before this are rejected: pre-1990 dates here have been parser/model artefacts
+// (1941-01-02, 1945-01-02...). A genuinely older document keeps whatever date Paperless or a
+// human gave it. Override with AI_MIN_CREATED_DATE=yyyy-MM-dd.
+const MIN_CREATED_DATE = /^\d{4}-\d{2}-\d{2}$/.test(process.env.AI_MIN_CREATED_DATE || '')
+  ? process.env.AI_MIN_CREATED_DATE
+  : '1990-01-01';
+
 class PaperlessService {
   constructor() {
     this.client = null;
@@ -253,6 +262,28 @@ class PaperlessService {
       }
     }
 
+
+  /**
+   * Id of the tag whose documents keep their `created` date (PROTECTED_DATE_TAG), or null when the
+   * tag does not exist yet. Cached for CACHE_LIFETIME, including the "not found" answer, so a
+   * missing tag costs one lookup per cache period rather than one per document.
+   * @returns {Promise<number|null>}
+   */
+  async getProtectedDateTagId() {
+    const now = Date.now();
+    if (this.protectedTagCheckedAt && (now - this.protectedTagCheckedAt) <= this.CACHE_LIFETIME) {
+      return this.protectedTagId;
+    }
+    let tag = null;
+    try {
+      tag = await this.findExistingTag(PROTECTED_DATE_TAG);
+    } catch (error) {
+      console.warn(`[WARN] Could not look up the ${PROTECTED_DATE_TAG} tag:`, error.message);
+    }
+    this.protectedTagId = tag ? tag.id : null;
+    this.protectedTagCheckedAt = now;
+    return this.protectedTagId;
+  }
 
   async findExistingTag(tagName) {
     const normalizedName = tagName.toLowerCase();
@@ -1296,14 +1327,28 @@ async getOrCreateDocumentType(name) {
       // the old 1990-01-01 fallback silently corrupted every document whose model
       // output was not a clean date (null-as-string, ranges, "August 2026").
       const updateData = { ...updates };
+      let dateChange = null;
       if ('created' in updates) {
         const created = normalizeCreatedDate(updates.created);
-        if (created) {
-          updateData.created = created;
-        } else {
+        const oldCreated = typeof currentDoc.created === 'string' ? currentDoc.created.slice(0, 10) : null;
+        const protectedTagId = await this.getProtectedDateTagId();
+        if (!created) {
           delete updateData.created;
           if (updates.created) {
             console.warn(`[WARN] Unparseable document date "${updates.created}" for document ${documentId}; keeping the existing created date`);
+          }
+        } else if (!isPlausibleCreatedDate(created)) {
+          // e.g. 2099-12-31 on a document with no date in its text (#1478, 2026-10-05)
+          delete updateData.created;
+          console.warn(`[WARN] Implausible document date ${created} for document ${documentId} (future or before ${MIN_CREATED_DATE}); keeping the existing created date`);
+        } else if (protectedTagId !== null && (currentDoc.tags || []).includes(protectedTagId)) {
+          // Dates set at upload from a reviewed manifest (paperless-ingest --manifest) are authoritative.
+          delete updateData.created;
+          console.log(`[DEBUG] Document ${documentId} is tagged ${PROTECTED_DATE_TAG}; keeping its created date`);
+        } else {
+          updateData.created = created;
+          if (created !== oldCreated) {
+            dateChange = { old: oldCreated, new: created };
           }
         }
       }
@@ -1331,6 +1376,10 @@ async getOrCreateDocumentType(name) {
       console.log('[DEBUG] Final update data:', updateData);
       await this.client.patch(`/documents/${documentId}/`, updateData);
       console.log('[SUCCESS] Updated document %s with:', documentId, updateData);
+      if (dateChange) {
+        // One fixed-format line per applied date change; paperless-health's weekly report counts these.
+        console.log(`[DATE-CHANGE] doc=${documentId} old=${dateChange.old} new=${dateChange.new}`);
+      }
       return await this.getDocument(documentId);
     } catch (error) {
       console.log(error);
@@ -1356,5 +1405,18 @@ function normalizeCreatedDate(value) {
   return null;
 }
 
+/**
+ * Whether a normalized `yyyy-MM-dd` date is a believable document date:
+ * not in the future and not before MIN_CREATED_DATE.
+ * @param {string} date Normalized date
+ * @param {Date} [now] Reference "today" (tests)
+ * @returns {boolean}
+ */
+function isPlausibleCreatedDate(date, now = new Date()) {
+  return date >= MIN_CREATED_DATE && date <= format(now, 'yyyy-MM-dd');
+}
+
 module.exports = new PaperlessService();
 module.exports.normalizeCreatedDate = normalizeCreatedDate;
+module.exports.isPlausibleCreatedDate = isPlausibleCreatedDate;
+module.exports.PROTECTED_DATE_TAG = PROTECTED_DATE_TAG;
