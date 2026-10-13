@@ -486,6 +486,13 @@ class OllamaService {
      * @returns {number} Context window size
      */
     _calculateNumCtx(promptTokenCount, expectedResponseTokens) {
+        // OLLAMA_NUM_CTX pins the context: Ollama reloads a model whenever num_ctx changes, so a
+        // per-document value forced a reload for nearly every document (and another for the next
+        // client using the model's own context). Fork change 2026-10-13.
+        const fixed = Number.parseInt(config.ollamaNumCtx, 10);
+        if (Number.isInteger(fixed) && fixed > 0) {
+            return fixed;
+        }
         const totalTokenUsage = promptTokenCount + expectedResponseTokens;
         const maxCtxLimit = Number(config.tokenLimit);
 

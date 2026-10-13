@@ -82,6 +82,9 @@ module.exports = {
   disableAutomaticProcessing: process.env.DISABLE_AUTOMATIC_PROCESSING || 'no',
   predefinedMode: process.env.PROCESS_PREDEFINED_DOCUMENTS,
   tokenLimit: process.env.TOKEN_LIMIT || 128000,
+  // Fixed Ollama num_ctx (e.g. 65536). When set, every request uses it instead of the per-document
+  // estimate, so the model is never reloaded for a new context size. Prompts are still cut to TOKEN_LIMIT.
+  ollamaNumCtx: process.env.OLLAMA_NUM_CTX || '',
   responseTokens: process.env.RESPONSE_TOKENS || 1000,
   addAIProcessedTag: process.env.ADD_AI_PROCESSED_TAG || 'no',
   addAIProcessedTags: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
