@@ -130,5 +130,5 @@ When making changes to the codebase:
 
 2. **Paperless-AI Integration Changes**:
    - Edit Node.js files (like `services/ragService.js` or `routes/rag.js`)
-   - If using nodemon (with `npm run dev`), changes should be applied automatically
+   - If using watch mode (`npm test`, which runs `node --watch`), changes should be applied automatically
    - For UI changes to `views/rag.ejs`, refresh the browser
