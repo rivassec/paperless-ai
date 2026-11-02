@@ -4,17 +4,17 @@
 # Activate virtual environment for Python
 source /app/venv/bin/activate
 
-# Start the Python RAG service in the background
-echo "Starting Python RAG service..."
-python main.py --host 127.0.0.1 --port 8000 --initialize &
-
-# Give it a moment to initialize
-sleep 2
-echo "Python RAG service started"
-
-# Set environment variables for the Node.js service
-export RAG_SERVICE_URL="http://localhost:8000"
-export RAG_SERVICE_ENABLED="true"
+# RAG_SERVICE_ENABLED=false skips the Python RAG service entirely (default: true).
+export RAG_SERVICE_ENABLED="${RAG_SERVICE_ENABLED:-true}"
+export RAG_SERVICE_URL="${RAG_SERVICE_URL:-http://localhost:8000}"
+if [ "$RAG_SERVICE_ENABLED" = "true" ]; then
+  echo "Starting Python RAG service..."
+  python main.py --host 127.0.0.1 --port 8000 --initialize &
+  sleep 2
+  echo "Python RAG service started"
+else
+  echo "RAG service disabled (RAG_SERVICE_ENABLED=$RAG_SERVICE_ENABLED)"
+fi
 
 # Start the Node.js application in the foreground (replaces the shell so tini
 # delivers signals straight to node; docker restart policy handles crashes).
