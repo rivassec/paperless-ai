@@ -110,7 +110,12 @@ module.exports = {
     // Ollama native thinking toggle. Unset = use the model default; false disables
     // reasoning output, required for reasoning models (Qwen3, Deepseek-r1, ...) which
     // otherwise spend the num_predict budget on <think> and return no answer.
-    think: parseOptionalBoolean(process.env.OLLAMA_THINK)
+    think: parseOptionalBoolean(process.env.OLLAMA_THINK),
+    // presence_penalty sent with every request. Default 0: a presence penalty pushes the model away from
+    // tokens already in the prompt, i.e. away from the existing tag names it is asked to choose from.
+    // Measured 2026-11-06 (qwen3.8-27b, 60 docs, 3+3 runs): tag F1 41.1 -> 50.3 at 0 vs the Modelfile's 1.5.
+    presencePenalty: process.env.OLLAMA_PRESENCE_PENALTY !== undefined && process.env.OLLAMA_PRESENCE_PENALTY !== ''
+      ? Number(process.env.OLLAMA_PRESENCE_PENALTY) : 0
   },
   custom: {
     apiUrl: process.env.CUSTOM_BASE_URL || '',
