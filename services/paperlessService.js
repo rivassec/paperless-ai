@@ -353,13 +353,8 @@ class PaperlessService {
                                    (options.restrictToExistingTags === undefined && 
                                     process.env.RESTRICT_TO_EXISTING_TAGS === 'yes');
       
-      // Input validation
-      if (!tagNames) {
-        console.warn('[DEBUG] No tags provided to processTags');
-        return { tagIds: [], errors: [] };
-      }
-
-      // Convert to array if string is passed
+      // Convert to array if string is passed. No tags is a valid answer (TAG_ALLOWLIST allows zero):
+      // fall through so the AI-processed tag is still added
       const tagsArray = typeof tagNames === 'string' 
         ? [tagNames]
         : Array.isArray(tagNames) 
@@ -368,7 +363,6 @@ class PaperlessService {
 
       if (tagsArray.length === 0) {
         console.warn('[DEBUG] No valid tags to process');
-        return { tagIds: [], errors: [] };
       }
   
       const tagIds = [];

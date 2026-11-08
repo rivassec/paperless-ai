@@ -13,6 +13,7 @@ const paperlessService = require('./paperlessService');
 const os = require('os');
 const OpenAI = require('openai');
 const RestrictionPromptService = require('./restrictionPromptService');
+const { buildTagSchema } = require('./tagAllowlist');
 
 /**
  * Service for document analysis using Ollama
@@ -145,7 +146,7 @@ class OllamaService {
             console.log(`[DEBUG] External API data: ${validatedExternalApiData ? 'included' : 'none'}`);
 
             // Call Ollama API
-            const response = await this._callOllamaAPI(prompt, systemPrompt, numCtx, this.documentAnalysisSchema);
+            const response = await this._callOllamaAPI(prompt, systemPrompt, numCtx, this._schemaFor(options));
 
             // Process response
             const parsedResponse = this._processOllamaResponse(response);
@@ -539,6 +540,18 @@ class OllamaService {
             await fs.mkdir(path.dirname(cachePath), { recursive: true });
             await fs.writeFile(cachePath, thumbnailData);
         }
+    }
+
+    /**
+     * Response schema for document analysis; with options.tagSchemaEnum (TAG_SCHEMA_ENUM) the tags
+     * array is limited to those names
+     * @param {Object} options - analyzeDocument options
+     * @returns {Object} JSON schema
+     */
+    _schemaFor(options = {}) {
+        return options.tagSchemaEnum
+            ? buildTagSchema(this.documentAnalysisSchema, options.tagSchemaEnum)
+            : this.documentAnalysisSchema;
     }
 
     /**
