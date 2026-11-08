@@ -17,6 +17,7 @@ const ollamaService = require('../services/ollamaService.js');
 const azureService = require('../services/azureService.js');
 const documentModel = require('../models/document.js');
 const AIServiceFactory = require('../services/aiServiceFactory');
+const tagAllowlist = require('../services/tagAllowlist');
 const debugService = require('../services/debugService.js');
 const configFile = require('../config/config.js');
 const ChatService = require('../services/chatService.js');
@@ -1563,6 +1564,9 @@ try {
 async function processDocument(doc, existingTags, existingCorrespondentList, existingDocumentTypesList, ownUserId, customPrompt = null) {
   const isProcessed = await documentModel.isDocumentProcessed(doc.id);
   if (isProcessed) return null;
+  // TAG_ALLOWLIST: a bad list throws here, before the document is marked processing or processed
+  const tagAllow = tagAllowlist.fromEnv(existingTags);
+  const modelTags = tagAllow ? tagAllow.names : existingTags;
   await documentModel.setProcessingStatus(doc.id, doc.title, 'processing');
 
   const documentEditable = await paperlessService.getPermissionOfDocument(doc.id);
@@ -1591,7 +1595,8 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   // Prepare options for AI service
   const options = {
     restrictToExistingTags: config.restrictToExistingTags === 'yes',
-    restrictToExistingCorrespondents: config.restrictToExistingCorrespondents === 'yes'
+    restrictToExistingCorrespondents: config.restrictToExistingCorrespondents === 'yes',
+    tagSchemaEnum: tagAllow?.schemaEnum ? tagAllow.names : undefined
   };
 
   // Get external API data if enabled
@@ -1612,14 +1617,15 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   let analysis;
   if(customPrompt) {
     console.log('[DEBUG] Starting document analysis with custom prompt');
-    analysis = await aiService.analyzeDocument(content, existingTags, existingCorrespondentList, existingDocumentTypesList, doc.id, customPrompt, options);
+    analysis = await aiService.analyzeDocument(content, modelTags, existingCorrespondentList, existingDocumentTypesList, doc.id, customPrompt, options);
   }else{
-    analysis = await aiService.analyzeDocument(content, existingTags, existingCorrespondentList, existingDocumentTypesList, doc.id, null, options);
+    analysis = await aiService.analyzeDocument(content, modelTags, existingCorrespondentList, existingDocumentTypesList, doc.id, null, options);
   }
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
     throw new Error(`[ERROR] Document analysis failed: ${analysis.error}`);
   }
+  tagAllowlist.enforce(analysis, tagAllow, doc.id);
   await documentModel.setProcessingStatus(doc.id, doc.title, 'complete');
   return { analysis, originalData };
 }

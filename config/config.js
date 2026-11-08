@@ -82,6 +82,9 @@ module.exports = {
   disableAutomaticProcessing: process.env.DISABLE_AUTOMATIC_PROCESSING || 'no',
   predefinedMode: process.env.PROCESS_PREDEFINED_DOCUMENTS,
   tokenLimit: process.env.TOKEN_LIMIT || 128000,
+  // Fixed Ollama num_ctx (e.g. 65536). When set, every request uses it instead of the per-document
+  // estimate, so the model is never reloaded for a new context size. Prompts are still cut to TOKEN_LIMIT.
+  ollamaNumCtx: process.env.OLLAMA_NUM_CTX || '',
   responseTokens: process.env.RESPONSE_TOKENS || 1000,
   addAIProcessedTag: process.env.ADD_AI_PROCESSED_TAG || 'no',
   addAIProcessedTags: process.env.AI_PROCESSED_TAG_NAME || 'ai-processed',
@@ -107,7 +110,16 @@ module.exports = {
     // Ollama native thinking toggle. Unset = use the model default; false disables
     // reasoning output, required for reasoning models (Qwen3, Deepseek-r1, ...) which
     // otherwise spend the num_predict budget on <think> and return no answer.
-    think: parseOptionalBoolean(process.env.OLLAMA_THINK)
+    think: parseOptionalBoolean(process.env.OLLAMA_THINK),
+    // presence_penalty sent with every request. Default 0: a presence penalty pushes the model away from
+    // tokens already in the prompt, i.e. away from the existing tag names it is asked to choose from.
+    // Measured 2026-11-06 (qwen3.8-27b, 60 docs, 3+3 runs): tag F1 41.1 -> 50.3 at 0 vs the Modelfile's 1.5.
+    presencePenalty: process.env.OLLAMA_PRESENCE_PENALTY !== undefined && process.env.OLLAMA_PRESENCE_PENALTY !== ''
+      ? Number(process.env.OLLAMA_PRESENCE_PENALTY) : 0,
+    // temperature for document analysis (_callOllamaAPI); free-text generation keeps 0.7. Default 0.7 = the previous
+    // hardcoded value; an empty, non-numeric or negative value also falls back to it.
+    temperature: (v => (Number.isFinite(v) && v >= 0 ? v : 0.7))(
+      process.env.OLLAMA_TEMPERATURE ? Number(process.env.OLLAMA_TEMPERATURE) : NaN)
   },
   custom: {
     apiUrl: process.env.CUSTOM_BASE_URL || '',
