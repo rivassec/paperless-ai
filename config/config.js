@@ -115,7 +115,11 @@ module.exports = {
     // tokens already in the prompt, i.e. away from the existing tag names it is asked to choose from.
     // Measured 2026-11-06 (qwen3.8-27b, 60 docs, 3+3 runs): tag F1 41.1 -> 50.3 at 0 vs the Modelfile's 1.5.
     presencePenalty: process.env.OLLAMA_PRESENCE_PENALTY !== undefined && process.env.OLLAMA_PRESENCE_PENALTY !== ''
-      ? Number(process.env.OLLAMA_PRESENCE_PENALTY) : 0
+      ? Number(process.env.OLLAMA_PRESENCE_PENALTY) : 0,
+    // temperature for document analysis (_callOllamaAPI); free-text generation keeps 0.7. Default 0.7 = the previous
+    // hardcoded value; an empty, non-numeric or negative value also falls back to it.
+    temperature: (v => (Number.isFinite(v) && v >= 0 ? v : 0.7))(
+      process.env.OLLAMA_TEMPERATURE ? Number(process.env.OLLAMA_TEMPERATURE) : NaN)
   },
   custom: {
     apiUrl: process.env.CUSTOM_BASE_URL || '',
