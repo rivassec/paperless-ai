@@ -5,6 +5,7 @@ const fs = require('fs').promises;
 const config = require('./config/config');
 const paperlessService = require('./services/paperlessService');
 const AIServiceFactory = require('./services/aiServiceFactory');
+const tagAllowlist = require('./services/tagAllowlist');
 const documentModel = require('./models/document');
 const setupService = require('./services/setupService');
 const setupRoutes = require('./routes/setup');
@@ -195,6 +196,9 @@ async function saveOpenApiSpec() {
 async function processDocument(doc, existingTags, existingCorrespondentList, existingDocumentTypesList, ownUserId) {
   const isProcessed = await documentModel.isDocumentProcessed(doc.id);
   if (isProcessed) return null;
+  // TAG_ALLOWLIST: a bad list throws here, before the document is marked processing or processed
+  const tagAllow = tagAllowlist.fromEnv(existingTags);
+  const modelTags = tagAllow ? tagAllow.names : existingTags;
   await documentModel.setProcessingStatus(doc.id, doc.title, 'processing');
 
   //Check if the Document can be edited
@@ -222,11 +226,13 @@ async function processDocument(doc, existingTags, existingCorrespondentList, exi
   }
 
   const aiService = AIServiceFactory.getService();
-  const analysis = await aiService.analyzeDocument(content, existingTags, existingCorrespondentList, existingDocumentTypesList, doc.id);
+  const analysis = await aiService.analyzeDocument(content, modelTags, existingCorrespondentList, existingDocumentTypesList, doc.id, null,
+    { tagSchemaEnum: tagAllow?.schemaEnum ? tagAllow.names : undefined });
   console.log('Repsonse from AI service:', analysis);
   if (analysis.error) {
     throw new Error(`[ERROR] Document analysis failed: ${analysis.error}`);
   }
+  tagAllowlist.enforce(analysis, tagAllow, doc.id);
   await documentModel.setProcessingStatus(doc.id, doc.title, 'complete');
   return { analysis, originalData };
 }

@@ -13,6 +13,7 @@ const paperlessService = require('./paperlessService');
 const os = require('os');
 const OpenAI = require('openai');
 const RestrictionPromptService = require('./restrictionPromptService');
+const { buildTagSchema } = require('./tagAllowlist');
 
 /**
  * Service for document analysis using Ollama
@@ -25,6 +26,8 @@ class OllamaService {
         this.apiUrl = config.ollama.apiUrl;
         this.model = config.ollama.model;
         this.think = config.ollama.think;
+        this.presencePenalty = config.ollama.presencePenalty;
+        this.temperature = config.ollama.temperature;
         this.client = axios.create({
             timeout: 1800000 // 30 minutes timeout
         });
@@ -144,7 +147,7 @@ class OllamaService {
             console.log(`[DEBUG] External API data: ${validatedExternalApiData ? 'included' : 'none'}`);
 
             // Call Ollama API
-            const response = await this._callOllamaAPI(prompt, systemPrompt, numCtx, this.documentAnalysisSchema);
+            const response = await this._callOllamaAPI(prompt, systemPrompt, numCtx, this._schemaFor(options));
 
             // Process response
             const parsedResponse = this._processOllamaResponse(response);
@@ -486,6 +489,13 @@ class OllamaService {
      * @returns {number} Context window size
      */
     _calculateNumCtx(promptTokenCount, expectedResponseTokens) {
+        // OLLAMA_NUM_CTX pins the context: Ollama reloads a model whenever num_ctx changes, so a
+        // per-document value forced a reload for nearly every document (and another for the next
+        // client using the model's own context). Fork change 2026-10-13.
+        const fixed = Number.parseInt(config.ollamaNumCtx, 10);
+        if (Number.isInteger(fixed) && fixed > 0) {
+            return fixed;
+        }
         const totalTokenUsage = promptTokenCount + expectedResponseTokens;
         const maxCtxLimit = Number(config.tokenLimit);
 
@@ -534,6 +544,18 @@ class OllamaService {
     }
 
     /**
+     * Response schema for document analysis; with options.tagSchemaEnum (TAG_SCHEMA_ENUM) the tags
+     * array is limited to those names
+     * @param {Object} options - analyzeDocument options
+     * @returns {Object} JSON schema
+     */
+    _schemaFor(options = {}) {
+        return options.tagSchemaEnum
+            ? buildTagSchema(this.documentAnalysisSchema, options.tagSchemaEnum)
+            : this.documentAnalysisSchema;
+    }
+
+    /**
      * Call Ollama API
      * @param {string} prompt - Prompt text
      * @param {string} systemPrompt - System prompt
@@ -550,9 +572,10 @@ class OllamaService {
             ...(this.think !== undefined && { think: this.think }),
             format: schema,
             options: {
-                temperature: 0.7,
+                temperature: this.temperature,
                 top_p: 0.9,
                 repeat_penalty: 1.1,
+                presence_penalty: this.presencePenalty,
                 top_k: 7,
                 num_predict: 256,
                 num_ctx: numCtx
@@ -703,6 +726,7 @@ class OllamaService {
                 options: {
                     temperature: 0.7,
                     top_p: 0.9,
+                    presence_penalty: this.presencePenalty,
                     num_predict: 1024,
                     num_ctx: numCtx
                 }

@@ -51,10 +51,12 @@ class RestrictionPromptService {
       return '';
     }
 
-    return existingTags
-      .filter(tag => tag && tag.name)
-      .map(tag => tag.name)
-      .join(', ');
+    // Callers pass tag-name strings (server.js) or tag objects; a JSON array keeps names with commas unambiguous
+    const names = existingTags
+      .map(tag => (typeof tag === 'string' ? tag : tag?.name))
+      .filter(name => typeof name === 'string' && name.trim().length > 0)
+      .map(name => name.trim());
+    return JSON.stringify([...new Set(names)]);
   }
 
   /**
