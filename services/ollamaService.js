@@ -25,6 +25,7 @@ class OllamaService {
         this.apiUrl = config.ollama.apiUrl;
         this.model = config.ollama.model;
         this.think = config.ollama.think;
+        this.presencePenalty = config.ollama.presencePenalty;
         this.client = axios.create({
             timeout: 1800000 // 30 minutes timeout
         });
@@ -560,6 +561,7 @@ class OllamaService {
                 temperature: 0.7,
                 top_p: 0.9,
                 repeat_penalty: 1.1,
+                presence_penalty: this.presencePenalty,
                 top_k: 7,
                 num_predict: 256,
                 num_ctx: numCtx
@@ -710,6 +712,7 @@ class OllamaService {
                 options: {
                     temperature: 0.7,
                     top_p: 0.9,
+                    presence_penalty: this.presencePenalty,
                     num_predict: 1024,
                     num_ctx: numCtx
                 }
