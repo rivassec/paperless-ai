@@ -19,6 +19,7 @@ const documentModel = require('../models/document.js');
 const AIServiceFactory = require('../services/aiServiceFactory');
 const tagAllowlist = require('../services/tagAllowlist');
 const debugService = require('../services/debugService.js');
+const { createSetupGuard } = require('../services/setupGuard');
 const configFile = require('../config/config.js');
 const ChatService = require('../services/chatService.js');
 const documentsService = require('../services/documentsService.js');
@@ -29,9 +30,10 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { authenticateJWT, isAuthenticated } = require('./auth.js');
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = require('../config/jwtSecret').getJwtSecret();
 const customService = require('../services/customService.js');
 const config = require('../config/config.js');
+const setupGuard = createSetupGuard({ getUsers: () => documentModel.getUsers() });
 require('dotenv').config({ path: '../data/.env' });
 
 /**
@@ -3616,7 +3618,7 @@ router.get('/health', async (req, res) => {
  *                   type: string
  *                   example: "Failed to save configuration: Database error"
  */
-router.post('/setup', express.json(), async (req, res) => {
+router.post('/setup', setupGuard, express.json(), async (req, res) => {
   try {
     const { 
       paperlessUrl, 
