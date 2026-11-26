@@ -30,7 +30,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { authenticateJWT, isAuthenticated } = require('./auth.js');
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = require('../config/jwtSecret').getJwtSecret();
 const customService = require('../services/customService.js');
 const config = require('../config/config.js');
 const setupGuard = createSetupGuard({ getUsers: () => documentModel.getUsers() });

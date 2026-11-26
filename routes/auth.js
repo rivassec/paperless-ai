@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 
 // JWT secret key - should be moved to environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = require('../config/jwtSecret').getJwtSecret();
 
 // JWT middleware to verify token
 const authenticateJWT = (req, res, next) => {
